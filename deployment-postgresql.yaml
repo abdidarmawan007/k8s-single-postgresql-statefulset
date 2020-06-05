@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: staging-postgresql
+  namespace: staging
+spec:
+  selector:
+    matchLabels:
+      app: staging-postgresql
+  serviceName: staging-postgresql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: staging-postgresql
+      annotations:
+          sidecar.istio.io/inject: "false"  
+    spec:
+      containers:
+        - image: postgres:12
+          name: staging-postgresql
+          env:
+          - name: POSTGRES_DB
+            value: abdi_db
+          - name: POSTGRES_USER
+            value: abdi101
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: postgres 
+          - name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+          - name: TZ
+            value: Asia/Jakarta  
+          ports:
+            - containerPort: 5432
+          resources:
+              requests:
+                 cpu: "400m"
+                 memory: "600Mi"
+              limits:
+                 cpu: "800m"
+                 memory: "1200Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: postgresql-persistent-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgresql-persistent-storage
+          persistentVolumeClaim:
+            claimName: postgresql-pvc
+---
+## config for service
+apiVersion: v1
+kind: Service
+metadata:
+  name: staging-postgresql
+  namespace: staging
+  labels:
+    app: staging-postgresql
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+  selector:
+    app: staging-postgresql

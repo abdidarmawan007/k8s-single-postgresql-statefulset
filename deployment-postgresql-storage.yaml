@@ -1,0 +1,23 @@
+## config storage class GCP (SSD/HDD)
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: pd-ssd-db
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+---  
+## config pvc
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: postgresql-pvc
+  namespace: staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: pd-ssd-db
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
